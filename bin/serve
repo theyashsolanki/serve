@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# Define ANSI color codes
+RED='\033[0;31m'      # Red color
+GREEN='\033[0;32m'    # Green color
+BLUE='\033[0;34m'     # Blue color
+NC='\033[0m'          # No color (reset)
+
+if [ "$#" -gt 6 ]; then
+  echo -e "${RED}Error: Too many arguments."
+  exit 1
+fi
+
+dir="$(dirname "$0")"
+dir="$(dirname "$dir")"
+fileName="index.html"
+port="3005"
+portFound=false
+isPublic=false
+reloadOnSave=false
+isDynamicRoutes=false
+
+for arg in "$@"; do
+  if [ "$portFound" = true ]; then
+    port="$arg"
+    portFound=false
+  elif [ "$arg" = "-p" ]; then
+    portFound=true  
+  elif [ "$arg" = "-r" ]; then
+    reloadOnSave=true
+  elif [ "$arg" = "-d" ]; then
+    isDynamicRoutes=true
+  elif [ "$arg" = "--public" ]; then
+    isPublic=true
+  elif [[ "$arg" == *.html ]]; then
+    fileName="$arg"
+  else 
+    echo -e "${RED}Error: Invalid argument: $arg"
+    exit 1
+  fi
+done
+
+if [ ! -f "$(pwd)/$fileName" ]; then
+  echo -e "${RED}Error: File not found: $(pwd)/$fileName"
+  exit 1
+fi
+
+ngrok_pid=false
+
+# Start Ngrok
+if [ "$isPublic" = true ]; then
+  ngrok http "$port" > /dev/null &
+  ngrok_pid=$!
+  # Wait for Ngrok to start
+  sleep 2
+  # Fetch Ngrok tunnel URL from status API
+  ngrok_url=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+
+  # Print the URL
+  echo -e "${BLUE}Public URL${NC}: ${GREEN}$ngrok_url"
+fi
+echo -e "${BLUE}Local URL${NC}: ${GREEN}http://localhost:$port"
+
+node "$dir/beta/server.js" "$(pwd)/$fileName" "$(pwd)" "$port" "$reloadOnSave" "$isDynamicRoutes"
+
+if [ "$ngrok_pid" != false ]; then
+  kill -9 "$ngrok_pid"
+fi
