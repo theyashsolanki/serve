@@ -14,16 +14,11 @@ const routesTable = new Map();
 
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(req.url);
-  console.log(
-    req.method,
-    pathname,
-    req.connection.remoteAddress.split(":").pop(),
-  );
   const ext = pathname.split(".").pop();
   fs.readFile(
     pathname == "/" ? indexFilePath : working_dir + pathname,
     (err, data) => {
-      if (err && routesTable.has(pathname) && isDynamicRoutes) {
+      if (routesTable.has(pathname) && isDynamicRoutes) {
         res.writeHead(200, { "Content-Type": "text/html" });
         res.end(routesTable.get(pathname));
         return;
@@ -37,10 +32,22 @@ const server = http.createServer((req, res) => {
       }
       data = data.toString();
       res.writeHead(200, { "Content-Type": getContentType(ext) });
-      if (autoReload === "true" && (ext === "html" || pathname === "/")) {
+      if (
+        (autoReload === "true" || isDynamicRoutes === "true") &&
+        (ext === "html" || pathname === "/")
+      ) {
         data = processHtml(data);
       }
       res.end(data);
+      if (pathname.split(".").length <= 1) {
+        console.log(
+          "%s %s %s %s",
+          req.method,
+          pathname,
+          res.statusCode,
+          res.statusMessage,
+        );
+      }
     },
   );
 });
@@ -118,7 +125,7 @@ function processHtml(htmlData) {
 function startWebSocket() {
   const socket = new WebSocket.Server({ server });
   let reloadTimeout;
-  socket.on("connection", (ws) => {
+  if (autoReload === "true") {
     fs.watch(working_dir, (eventType, filename) => {
       if (
         eventType === "change" && (filename.endsWith(".js") ||
@@ -126,12 +133,18 @@ function startWebSocket() {
       ) {
         clearTimeout(reloadTimeout);
         reloadTimeout = setTimeout(() => {
-          ws.send("reload");
-        }, 500);
+          console.log("reloading...");
+          socket.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send("reload");
+            }
+          });
+        }, 200);
       }
     });
+  }
+  socket.on("connection", (ws) => {
     ws.on("message", (message) => {
-      console.log("path changed");
       const receivedData = JSON.parse(message);
       if (!routesTable.has(receivedData.path)) {
         routesTable.set(receivedData.path, receivedData.html);
@@ -140,12 +153,11 @@ function startWebSocket() {
   });
 }
 
-if (autoReload === "true") {
+if (autoReload === "true" || isDynamicRoutes === "true") {
   startWebSocket();
 }
 
 server.listen(PORT, () => {
-  console.log(`server started at ${PORT}`);
   if (platform === "win32") {
     exec(`start http://localhost:${PORT}`);
   } else if (platform === "darwin") {

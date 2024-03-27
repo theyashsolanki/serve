@@ -61,7 +61,7 @@ if [ "$isPublic" = true ]; then
 fi
 echo -e "${BLUE}Local URL${NC}: ${GREEN}http://localhost:$port"
 
-node "$dir/beta/server.js" "$(pwd)/$fileName" "$(pwd)" "$port" "$reloadOnSave" "$isDynamicRoutes"
+node "$dir/server.js" "$(pwd)/$fileName" "$(pwd)" "$port" "$reloadOnSave" "$isDynamicRoutes"
 
 if [ "$ngrok_pid" != false ]; then
   kill -9 "$ngrok_pid"
