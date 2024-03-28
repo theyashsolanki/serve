@@ -17,8 +17,8 @@ fileName="index.html"
 port="3005"
 portFound=false
 isPublic=false
-reloadOnSave=false
-isDynamicRoutes=false
+isAutoReload=false
+isDynamic=false
 
 for arg in "$@"; do
   if [ "$portFound" = true ]; then
@@ -27,9 +27,9 @@ for arg in "$@"; do
   elif [ "$arg" = "-p" ]; then
     portFound=true  
   elif [ "$arg" = "-r" ]; then
-    reloadOnSave=true
+    isAutoReload=true
   elif [ "$arg" = "-d" ]; then
-    isDynamicRoutes=true
+    isDynamic=true
   elif [ "$arg" = "--public" ]; then
     isPublic=true
   elif [[ "$arg" == *.html ]]; then
@@ -61,7 +61,7 @@ if [ "$isPublic" = true ]; then
 fi
 echo -e "${BLUE}Local URL${NC}: ${GREEN}http://localhost:$port"
 
-node "$dir/server.js" "$(pwd)/$fileName" "$(pwd)" "$port" "$reloadOnSave" "$isDynamicRoutes"
+node "$dir/server.js" "$(pwd)/$fileName" "$(pwd)" "$port" "$isAutoReload" "$isDynamic"
 
 if [ "$ngrok_pid" != false ]; then
   kill -9 "$ngrok_pid"
