@@ -7,8 +7,8 @@ const { exec } = require("child_process");
 const working_dir = process.argv[3];
 const indexFilePath = process.argv[2];
 const PORT = process.argv[4];
-const autoReload = process.argv[5] || "false";
-const isDynamicRoutes = process.argv[6] || "false";
+const isAutoReload = Boolean(process.argv[5]);
+const isDynamic = Boolean(process.argv[6]);
 
 const routesTable = new Map();
 
@@ -18,7 +18,7 @@ const server = http.createServer((req, res) => {
   fs.readFile(
     pathname == "/" ? indexFilePath : working_dir + pathname,
     (err, data) => {
-      if (routesTable.has(pathname) && isDynamicRoutes) {
+      if (routesTable.has(pathname) && isDynamic) {
         res.writeHead(200, { "Content-Type": "text/html" });
         res.end(routesTable.get(pathname));
         return;
@@ -33,7 +33,7 @@ const server = http.createServer((req, res) => {
       data = data.toString();
       res.writeHead(200, { "Content-Type": getContentType(ext) });
       if (
-        (autoReload === "true" || isDynamicRoutes === "true") &&
+        (isAutoReload || isDynamic) &&
         (ext === "html" || pathname === "/")
       ) {
         data = processHtml(data);
@@ -96,7 +96,7 @@ function processHtml(htmlData) {
               window.location.reload();
           };
         });
-        ${isDynamicRoutes === "true" ? routeManageComponent : ""}
+        ${isDynamic ? routeManageComponent : ""}
     </script> 
 `;
 
@@ -125,7 +125,7 @@ function processHtml(htmlData) {
 function startWebSocket() {
   const socket = new WebSocket.Server({ server });
   let reloadTimeout;
-  if (autoReload === "true") {
+  if (isAutoReload) {
     fs.watch(working_dir, (eventType, filename) => {
       if (
         eventType === "change" && (filename.endsWith(".js") ||
@@ -133,7 +133,6 @@ function startWebSocket() {
       ) {
         clearTimeout(reloadTimeout);
         reloadTimeout = setTimeout(() => {
-          console.log("reloading...");
           socket.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
               client.send("reload");
@@ -147,13 +146,16 @@ function startWebSocket() {
     ws.on("message", (message) => {
       const receivedData = JSON.parse(message);
       if (!routesTable.has(receivedData.path)) {
-        routesTable.set(receivedData.path, receivedData.html);
+        routesTable.set(
+          receivedData.path,
+          "<!DOCTYPE html>" + receivedData.html,
+        );
       }
     });
   });
 }
 
-if (autoReload === "true" || isDynamicRoutes === "true") {
+if (isAutoReload || isDynamic) {
   startWebSocket();
 }
 
