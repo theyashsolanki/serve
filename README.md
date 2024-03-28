@@ -6,19 +6,18 @@ Serve is a simple Node.js application that allows you to quickly serve static an
 ## Installation
   ------------
 
-  * Clone the repository to your local machine and cd into it and run `npm install`, or just copy paste below commands:
-
-    ```
     git clone https://github.com/theyashsolanki/serve.git ~/.serve
+    
     cd ~/.serve
+    
     npm install
-    ```
+    
   * export the `~/.serve/bin/` path in your `.bashrc` or `.zshrc` file.
-    * for bash:
+    *  `bash` :
     ```
     echo 'export PATH=$HOME/.serve/bin:$PATH' >> ~/.bashrc
     ```
-    * for zsh:
+    * `zsh` :
     ```
     echo 'export PATH=$HOME/.serve/bin:$PATH' >> ~/.zshrc
     ```
